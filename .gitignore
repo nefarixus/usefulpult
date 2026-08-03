@@ -6,3 +6,4 @@ dist-electron/
 .env
 *.log
 .DS_Store
+DEVELOPMENT.md
