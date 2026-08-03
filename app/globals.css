@@ -1,0 +1,108 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-main: "Nunito", system-ui, sans-serif;
+
+  /* Тема "Янтарь" (по умолчанию) */
+  --color-bg: 27 24 21;
+  --color-card: 36 32 25;
+  --color-card-hover: 42 37 29;
+  --color-border: 51 44 34;
+  --color-text: 239 231 219;
+  --color-dim: 168 154 134;
+  --color-accent: 227 169 85;
+  --color-accent-soft: 58 47 32;
+  --color-sage: 147 171 128;
+  --color-coral: 217 138 120;
+}
+
+[data-theme="ocean"] {
+  --color-bg: 16 23 26;
+  --color-card: 24 34 38;
+  --color-card-hover: 30 43 48;
+  --color-border: 37 50 56;
+  --color-text: 219 232 234;
+  --color-dim: 127 155 161;
+  --color-accent: 111 176 194;
+  --color-accent-soft: 22 48 56;
+}
+
+[data-theme="forest"] {
+  --color-bg: 18 22 15;
+  --color-card: 26 33 22;
+  --color-card-hover: 33 42 27;
+  --color-border: 43 53 33;
+  --color-text: 230 236 217;
+  --color-dim: 148 161 132;
+  --color-accent: 147 193 122;
+  --color-accent-soft: 34 48 24;
+}
+
+[data-theme="rose"] {
+  --color-bg: 26 20 22;
+  --color-card: 36 28 31;
+  --color-card-hover: 43 34 38;
+  --color-border: 54 42 46;
+  --color-text: 240 227 230;
+  --color-dim: 166 139 144;
+  --color-accent: 217 143 161;
+  --color-accent-soft: 58 34 41;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: rgb(var(--color-bg));
+}
+
+body {
+  color: rgb(var(--color-text));
+  font-family: var(--font-main);
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgb(var(--color-accent));
+  color: rgb(var(--color-bg));
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-border));
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-accent));
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--color-accent));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
