@@ -53,7 +53,10 @@ export const translations = {
     theme_ocean: "Океан",
     theme_forest: "Лес",
     theme_rose: "Роза",
-    settings_custom_color: "свой цвет",
+    settings_custom_primary: "основной цвет",
+    settings_custom_primary_short: "фон",
+    settings_custom_accent: "акцентный цвет",
+    settings_custom_accent_short: "акцент",
 
     city_search_placeholder: "город...",
     city_search_loading: "ищу...",
@@ -113,7 +116,10 @@ export const translations = {
     theme_ocean: "Ocean",
     theme_forest: "Forest",
     theme_rose: "Rose",
-    settings_custom_color: "custom color",
+    settings_custom_primary: "base color",
+    settings_custom_primary_short: "base",
+    settings_custom_accent: "accent color",
+    settings_custom_accent_short: "accent",
 
     city_search_placeholder: "city...",
     city_search_loading: "searching...",

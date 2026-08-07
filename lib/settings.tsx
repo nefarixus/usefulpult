@@ -7,7 +7,9 @@ export type Theme = "amber" | "ocean" | "forest" | "rose" | "custom";
 
 const THEME_KEY = "pult:theme";
 const LANG_KEY = "pult:lang";
+const CUSTOM_PRIMARY_KEY = "pult:customPrimary";
 const CUSTOM_ACCENT_KEY = "pult:customAccent";
+const DEFAULT_CUSTOM_PRIMARY = "#e3a955";
 const DEFAULT_CUSTOM_ACCENT = "#e3a955";
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -64,36 +66,68 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   ];
 }
 
+function mix(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
+  return [
+    Math.round(a[0] * (1 - t) + b[0] * t),
+    Math.round(a[1] * (1 - t) + b[1] * t),
+    Math.round(a[2] * (1 - t) + b[2] * t),
+  ];
+}
+
 // Every role below (bg, card, text...) uses the saturation/lightness the
 // "amber" preset actually uses at that role, just re-hued to whatever the
-// person picks — so a custom color gets a genuinely cohesive dark shell
-// built around it, the same way the 4 preset themes work, instead of a
-// single accent color floating on top of a fixed unrelated background.
-const ROLES: Record<string, [number, number]> = {
+// "primary" color's hue is — so the shell (background, cards, text) stays
+// cohesive and properly readable regardless of what's picked, instead of
+// depending on the exact lightness of an arbitrary user color.
+const SHELL_ROLES: Record<string, [number, number]> = {
   "--color-bg": [0.13, 0.09],
   "--color-card": [0.18, 0.12],
   "--color-card-hover": [0.18, 0.14],
   "--color-border": [0.2, 0.17],
   "--color-text": [0.3, 0.9],
   "--color-dim": [0.16, 0.59],
-  "--color-accent-soft": [0.3, 0.18],
 };
 
-function applyCustomPalette(hex: string) {
-  const [r, g, b] = hexToRgb(hex);
-  const [h] = rgbToHsl(r, g, b);
-  const root = document.documentElement.style;
-  for (const [cssVar, [s, l]] of Object.entries(ROLES)) {
-    root.setProperty(cssVar, hslToRgb(h, s, l).join(" "));
+function buildShell(primaryHex: string): Record<string, [number, number, number]> {
+  const [r, g, b] = hexToRgb(primaryHex);
+  const [h, s] = rgbToHsl(r, g, b);
+  // Black/white/gray input has no meaningful hue — force a neutral
+  // grayscale shell instead of an unstable/arbitrary tint.
+  const neutral = s < 0.06;
+  const out: Record<string, [number, number, number]> = {};
+  for (const [cssVar, [roleS, roleL]] of Object.entries(SHELL_ROLES)) {
+    out[cssVar] = hslToRgb(h, neutral ? 0 : roleS, roleL);
   }
-  // The accent itself keeps the exact color the person picked.
-  root.setProperty("--color-accent", `${r} ${g} ${b}`);
+  return out;
+}
+
+// The accent has to stay visibly distinct from the (always dark) shell to
+// do its job — buttons, big numbers, active states. Picking black/near-
+// black as the accent would otherwise make it disappear entirely, which
+// is unreadable rather than a legitimate style choice, so lightness is
+// floored while keeping the picked hue and saturation intact.
+function readableAccentRgb(accentHex: string): [number, number, number] {
+  const [r, g, b] = hexToRgb(accentHex);
+  const [h, s, l] = rgbToHsl(r, g, b);
+  return hslToRgb(h, s, Math.max(l, 0.45));
+}
+
+function applyCustomPalette(primaryHex: string, accentHex: string) {
+  const shell = buildShell(primaryHex);
+  const root = document.documentElement.style;
+  for (const [cssVar, rgb] of Object.entries(shell)) {
+    root.setProperty(cssVar, rgb.join(" "));
+  }
+  const accentRgb = readableAccentRgb(accentHex);
+  root.setProperty("--color-accent", accentRgb.join(" "));
+  root.setProperty("--color-accent-soft", mix(accentRgb, shell["--color-bg"], 0.75).join(" "));
 }
 
 function clearCustomPalette() {
   const root = document.documentElement.style;
-  for (const cssVar of Object.keys(ROLES)) root.removeProperty(cssVar);
-  root.removeProperty("--color-accent");
+  for (const cssVar of [...Object.keys(SHELL_ROLES), "--color-accent", "--color-accent-soft"]) {
+    root.removeProperty(cssVar);
+  }
 }
 
 type Ctx = {
@@ -102,6 +136,8 @@ type Ctx = {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: TranslationKey) => string;
+  customPrimary: string;
+  setCustomPrimary: (hex: string) => void;
   customAccent: string;
   setCustomAccent: (hex: string) => void;
 };
@@ -111,12 +147,15 @@ const SettingsContext = createContext<Ctx | null>(null);
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("amber");
   const [lang, setLang] = useState<Lang>("ru");
+  const [customPrimary, setCustomPrimaryState] = useState<string>(DEFAULT_CUSTOM_PRIMARY);
   const [customAccent, setCustomAccentState] = useState<string>(DEFAULT_CUSTOM_ACCENT);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
     const savedLang = localStorage.getItem(LANG_KEY) as Lang | null;
+    const savedPrimary = localStorage.getItem(CUSTOM_PRIMARY_KEY);
     const savedAccent = localStorage.getItem(CUSTOM_ACCENT_KEY);
+    if (savedPrimary) setCustomPrimaryState(savedPrimary);
     if (savedAccent) setCustomAccentState(savedAccent);
     if (savedTheme) setThemeState(savedTheme);
     if (savedLang) setLang(savedLang);
@@ -126,7 +165,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-theme", theme === "custom" ? "amber" : theme);
     localStorage.setItem(THEME_KEY, theme);
     if (theme === "custom") {
-      applyCustomPalette(customAccent);
+      applyCustomPalette(customPrimary, customAccent);
     } else {
       clearCustomPalette();
     }
@@ -141,10 +180,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setThemeState(next);
   }
 
+  function setCustomPrimary(hex: string) {
+    setCustomPrimaryState(hex);
+    localStorage.setItem(CUSTOM_PRIMARY_KEY, hex);
+    if (theme === "custom") applyCustomPalette(hex, customAccent);
+  }
+
   function setCustomAccent(hex: string) {
     setCustomAccentState(hex);
     localStorage.setItem(CUSTOM_ACCENT_KEY, hex);
-    if (theme === "custom") applyCustomPalette(hex);
+    if (theme === "custom") applyCustomPalette(customPrimary, hex);
   }
 
   function t(key: TranslationKey) {
@@ -153,7 +198,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   return (
     <SettingsContext.Provider
-      value={{ theme, setTheme, lang, setLang, t, customAccent, setCustomAccent }}
+      value={{
+        theme,
+        setTheme,
+        lang,
+        setLang,
+        t,
+        customPrimary,
+        setCustomPrimary,
+        customAccent,
+        setCustomAccent,
+      }}
     >
       {children}
     </SettingsContext.Provider>

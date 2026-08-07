@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pipette } from "lucide-react";
+import { Pipette, Droplet } from "lucide-react";
 import { useSettings, type Theme } from "@/lib/settings";
 import type { Lang } from "@/lib/translations";
 
@@ -15,7 +15,17 @@ const THEMES: { id: Exclude<Theme, "custom">; hex: string }[] = [
 const LANGS: Lang[] = ["ru", "en"];
 
 export default function SettingsPanel() {
-  const { theme, setTheme, lang, setLang, t, customAccent, setCustomAccent } = useSettings();
+  const {
+    theme,
+    setTheme,
+    lang,
+    setLang,
+    t,
+    customPrimary,
+    setCustomPrimary,
+    customAccent,
+    setCustomAccent,
+  } = useSettings();
   const [autostart, setAutostartState] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -52,29 +62,61 @@ export default function SettingsPanel() {
               style={{ backgroundColor: th.hex }}
             />
           ))}
+        </div>
 
-          <div className="relative h-8 w-8 shrink-0">
-            <input
-              type="color"
-              value={customAccent}
-              onChange={(e) => {
-                setCustomAccent(e.target.value);
-                setTheme("custom");
-              }}
-              aria-label={t("settings_custom_color")}
-              title={t("settings_custom_color")}
-              className="absolute inset-0 h-8 w-8 cursor-pointer opacity-0"
-            />
-            <div
-              className={`pointer-events-none flex h-8 w-8 items-center justify-center rounded-full border-2 transition-transform ${
-                theme === "custom"
-                  ? "scale-110 border-home-text"
-                  : "border-transparent"
-              }`}
-              style={{ backgroundColor: customAccent }}
-            >
-              <Pipette size={13} className="text-home-bg" />
+        <div className="mt-3 flex items-start gap-4">
+          <div className="flex flex-col items-center gap-1">
+            <div className="relative h-8 w-8 shrink-0">
+              <input
+                type="color"
+                value={customPrimary}
+                onChange={(e) => {
+                  setCustomPrimary(e.target.value);
+                  setTheme("custom");
+                }}
+                aria-label={t("settings_custom_primary")}
+                title={t("settings_custom_primary")}
+                className="absolute inset-0 h-8 w-8 cursor-pointer opacity-0"
+              />
+              <div
+                className={`pointer-events-none flex h-8 w-8 items-center justify-center rounded-full border-2 transition-transform ${
+                  theme === "custom"
+                    ? "scale-110 border-home-text"
+                    : "border-transparent"
+                }`}
+                style={{ backgroundColor: customPrimary }}
+              >
+                <Pipette size={13} className="text-home-bg" />
+              </div>
             </div>
+            <span className="text-[10px] text-home-dim">{t("settings_custom_primary_short")}</span>
+          </div>
+
+          <div className="flex flex-col items-center gap-1">
+            <div className="relative h-8 w-8 shrink-0">
+              <input
+                type="color"
+                value={customAccent}
+                onChange={(e) => {
+                  setCustomAccent(e.target.value);
+                  setTheme("custom");
+                }}
+                aria-label={t("settings_custom_accent")}
+                title={t("settings_custom_accent")}
+                className="absolute inset-0 h-8 w-8 cursor-pointer opacity-0"
+              />
+              <div
+                className={`pointer-events-none flex h-8 w-8 items-center justify-center rounded-full border-2 transition-transform ${
+                  theme === "custom"
+                    ? "scale-110 border-home-text"
+                    : "border-transparent"
+                }`}
+                style={{ backgroundColor: customAccent }}
+              >
+                <Droplet size={13} className="text-home-bg" />
+              </div>
+            </div>
+            <span className="text-[10px] text-home-dim">{t("settings_custom_accent_short")}</span>
           </div>
         </div>
       </div>
