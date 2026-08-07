@@ -143,7 +143,7 @@ function createTrayIcon() {
 
 async function createWindow() {
   const { height } = screen.getPrimaryDisplay().workAreaSize;
-  const winWidth = 380;
+  const winWidth = 440;
   const winHeight = 560;
   currentPos = { x: 40, y: Math.max(20, height - winHeight - 40) };
 
