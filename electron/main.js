@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, screen, session, nativeImage, ipcMain, clipboard, Notification } = require("electron");
+const { app, BrowserWindow, Tray, Menu, screen, session, nativeImage, ipcMain, clipboard, Notification, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const http = require("http");
@@ -366,53 +366,108 @@ function notify(title, body) {
   new Notification({ title, body }).show();
 }
 
+function showDialog(opts) {
+  // Windows toast notifications can silently fail to appear for unsigned
+  // apps depending on system settings — a modal dialog always renders,
+  // so this is what manual "Проверить обновления" clicks use to
+  // guarantee the person actually sees a result.
+  dialog.showMessageBox(mainWindow || undefined, {
+    type: "info",
+    title: "Домашний пульт",
+    buttons: ["OK"],
+    ...opts,
+  });
+}
+
 let lastCheckWasManual = false;
 
 // electron-updater only works against a real packaged build published to
 // GitHub Releases (see the "publish" field in package.json) — in dev it
 // throws, so this is a no-op unless app.isPackaged. `manual` controls
-// whether we show a toast even when there's nothing new — a packaged
+// whether we show a dialog even when there's nothing new — a packaged
 // app has no visible console, so without this a manual click on
 // "Проверить обновления" can look like it does nothing at all.
 function checkForUpdates(manual = false) {
   lastCheckWasManual = manual;
   if (!app.isPackaged) {
     console.log("[pult] автообновление пропущено — сборка не запакована.");
-    if (manual) notify("Домашний пульт", "Проверка обновлений недоступна в режиме разработки.");
+    if (manual) {
+      showDialog({ message: "Проверка обновлений недоступна в режиме разработки." });
+    }
     return;
   }
-  if (manual) notify("Домашний пульт", "Проверяю обновления...");
   autoUpdater.checkForUpdates().catch((e) => {
     console.warn("[pult] проверка обновлений не удалась:", e.message);
-    notify("Домашний пульт", "Не удалось проверить обновления: " + e.message);
+    if (manual) {
+      showDialog({
+        type: "error",
+        message: "Не удалось проверить обновления",
+        detail: e.message,
+      });
+    }
   });
 }
 
 function setupAutoUpdater() {
   if (!app.isPackaged) return;
   autoUpdater.autoDownload = true;
+  console.log("[pult] текущая версия:", app.getVersion());
+  try {
+    console.log("[pult] feed URL:", JSON.stringify(autoUpdater.getFeedURL?.()));
+  } catch (e) {
+    console.log("[pult] не удалось получить feed URL:", e.message);
+  }
+
   autoUpdater.on("update-available", (info) => {
     console.log("[pult] найдено обновление:", info.version);
-    notify("Домашний пульт", `Найдена версия ${info.version} — скачиваю...`);
+    if (lastCheckWasManual) {
+      showDialog({
+        message: `Найдена версия ${info.version}`,
+        detail: "Скачивается в фоне, установится при следующем запуске.",
+      });
+    }
   });
+
   autoUpdater.on("update-not-available", () => {
     console.log("[pult] обновлений нет — используется последняя версия.");
     if (lastCheckWasManual) {
-      notify("Домашний пульт", "У тебя уже последняя версия.");
+      showDialog({
+        message: "У тебя уже последняя версия",
+        detail: `Установлена: ${app.getVersion()}`,
+      });
     }
   });
+
   autoUpdater.on("error", (err) => {
     console.warn("[pult] ошибка автообновления:", err.message);
-    notify("Домашний пульт", "Ошибка автообновления: " + err.message);
+    if (lastCheckWasManual) {
+      showDialog({ type: "error", message: "Ошибка автообновления", detail: err.message });
+    }
   });
+
   autoUpdater.on("update-downloaded", (info) => {
     console.log("[pult] обновление скачано:", info.version, "— установится при следующем запуске.");
-    notify("Домашний пульт", `Версия ${info.version} скачана — установится при следующем перезапуске.`);
+    dialog
+      .showMessageBox(mainWindow || undefined, {
+        type: "info",
+        title: "Домашний пульт",
+        message: `Версия ${info.version} скачана`,
+        detail: "Установить сейчас или при следующем запуске?",
+        buttons: ["Перезапустить сейчас", "Позже"],
+        defaultId: 0,
+        cancelId: 1,
+      })
+      .then((result) => {
+        if (result.response === 0) autoUpdater.quitAndInstall();
+      });
   });
+
   checkForUpdates(false);
   // Recheck periodically for anyone who leaves the app running for a while.
   setInterval(() => checkForUpdates(false), 4 * 60 * 60 * 1000);
 }
+
+app.setAppUserModelId("com.homepult.app");
 
 app.whenReady().then(async () => {
   await createWindow();
