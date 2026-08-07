@@ -141,11 +141,60 @@ function createTrayIcon() {
     .resize({ width: 16, height: 16, quality: "best" });
 }
 
+const stateFilePath = path.join(app.getPath("userData"), "window-state.json");
+
+function loadWindowState() {
+  try {
+    const raw = fs.readFileSync(stateFilePath, "utf8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.x === "number" && typeof parsed.y === "number") return parsed;
+  } catch (e) {
+    // no saved state yet, or file is corrupt — just fall back to default
+  }
+  return null;
+}
+
+let saveStateTimer = null;
+function saveWindowState() {
+  if (saveStateTimer) clearTimeout(saveStateTimer);
+  saveStateTimer = setTimeout(() => {
+    saveStateTimer = null;
+    try {
+      fs.writeFileSync(stateFilePath, JSON.stringify({ x: currentPos.x, y: currentPos.y }));
+    } catch (e) {
+      console.warn("[pult] не удалось сохранить позицию окна:", e.message);
+    }
+  }, 300);
+}
+
+function flushWindowStateNow() {
+  if (saveStateTimer) {
+    clearTimeout(saveStateTimer);
+    saveStateTimer = null;
+  }
+  try {
+    fs.writeFileSync(stateFilePath, JSON.stringify({ x: currentPos.x, y: currentPos.y }));
+  } catch (e) {
+    // best effort — nothing more we can do on the way out
+  }
+}
+
+function clampToScreen(pos, winWidth, winHeight, screenWidth, screenHeight) {
+  return {
+    x: Math.min(Math.max(pos.x, 0), Math.max(0, screenWidth - winWidth)),
+    y: Math.min(Math.max(pos.y, 0), Math.max(0, screenHeight - winHeight)),
+  };
+}
+
 async function createWindow() {
-  const { height } = screen.getPrimaryDisplay().workAreaSize;
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   const winWidth = 440;
   const winHeight = 560;
-  currentPos = { x: 40, y: Math.max(20, height - winHeight - 40) };
+
+  const saved = loadWindowState();
+  currentPos = saved
+    ? clampToScreen(saved, winWidth, winHeight, width, height)
+    : { x: 40, y: Math.max(20, height - winHeight - 40) };
 
   mainWindow = new BrowserWindow({
     width: winWidth,
@@ -479,6 +528,7 @@ app.whenReady().then(async () => {
     if (!mainWindow) return;
     currentPos = { x: Math.round(x), y: Math.round(y) };
     mainWindow.setPosition(currentPos.x, currentPos.y);
+    saveWindowState();
   });
 
   ipcMain.handle("get-autostart", () => app.getLoginItemSettings().openAtLogin);
@@ -491,7 +541,12 @@ app.whenReady().then(async () => {
   });
 });
 
+app.on("before-quit", () => {
+  flushWindowStateNow();
+});
+
 app.on("window-all-closed", () => {
+  flushWindowStateNow();
   if (localServer) localServer.close();
   if (process.platform !== "darwin") app.quit();
 });
