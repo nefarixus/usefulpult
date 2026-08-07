@@ -45,46 +45,54 @@ const MIME_TYPES = {
   ".map": "application/json; charset=utf-8",
 };
 
-// Serves the static-exported Next.js app ("out/") over real HTTP instead
-// of file://. Loading a Next export via file:// is known to be fragile —
-// asset resolution, various web APIs (clipboard, some fetch edge cases)
-// treat file:// as a restricted/null origin, and behavior can vary by
-// Windows install path or asar quirks. A tiny local HTTP server sidesteps
-// all of that and behaves exactly like `npm run electron:dev` does
-// (which has always worked reliably), just serving pre-built files
-// instead of a live dev server.
+// Fixed ports (with fallbacks) instead of a random one — the browser
+// scopes localStorage to host+port, so a random port every launch was
+// silently wiping every setting (theme, language, checklist, clocks...)
+// on every restart, since each run got treated as a brand new origin.
+const PREFERRED_PORTS = [47837, 47838, 47839, 0];
+
 function startLocalServer(outDir) {
   return new Promise((resolve, reject) => {
-    const server = http.createServer((req, res) => {
-      try {
-        let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
-        if (urlPath === "/") urlPath = "/index.html";
-        const safePath = path.normalize(path.join(outDir, urlPath));
-        if (!safePath.startsWith(path.normalize(outDir))) {
-          res.writeHead(403);
-          res.end("Forbidden");
-          return;
-        }
-        fs.readFile(safePath, (err, data) => {
-          if (err) {
-            res.writeHead(404);
-            res.end("Not found");
+    function tryPort(i) {
+      const port = PREFERRED_PORTS[i];
+      const server = http.createServer((req, res) => {
+        try {
+          let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
+          if (urlPath === "/") urlPath = "/index.html";
+          const safePath = path.normalize(path.join(outDir, urlPath));
+          if (!safePath.startsWith(path.normalize(outDir))) {
+            res.writeHead(403);
+            res.end("Forbidden");
             return;
           }
-          const ext = path.extname(safePath).toLowerCase();
-          res.writeHead(200, { "Content-Type": MIME_TYPES[ext] || "application/octet-stream" });
-          res.end(data);
-        });
-      } catch (e) {
-        res.writeHead(500);
-        res.end("Server error");
-      }
-    });
-    server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      localServer = server;
-      resolve(server.address().port);
-    });
+          fs.readFile(safePath, (err, data) => {
+            if (err) {
+              res.writeHead(404);
+              res.end("Not found");
+              return;
+            }
+            const ext = path.extname(safePath).toLowerCase();
+            res.writeHead(200, { "Content-Type": MIME_TYPES[ext] || "application/octet-stream" });
+            res.end(data);
+          });
+        } catch (e) {
+          res.writeHead(500);
+          res.end("Server error");
+        }
+      });
+      server.once("error", (err) => {
+        if (err.code === "EADDRINUSE" && i + 1 < PREFERRED_PORTS.length) {
+          tryPort(i + 1);
+        } else {
+          reject(err);
+        }
+      });
+      server.listen(port, "127.0.0.1", () => {
+        localServer = server;
+        resolve(server.address().port);
+      });
+    }
+    tryPort(0);
   });
 }
 

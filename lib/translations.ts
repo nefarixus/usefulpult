@@ -32,6 +32,9 @@ export const translations = {
     currency_title: "Курс валют",
     currency_loading: "получаю курсы...",
     currency_error: "курсы сейчас недоступны",
+    currency_from: "Из",
+    currency_no_targets: "добавь валюту для сравнения",
+    currency_search_placeholder: "валюта...",
 
     tasks_title: "Мои дела",
     tasks_empty: "список пуст",
@@ -89,6 +92,9 @@ export const translations = {
     currency_title: "Exchange rates",
     currency_loading: "fetching rates...",
     currency_error: "rates unavailable right now",
+    currency_from: "From",
+    currency_no_targets: "add a currency to compare",
+    currency_search_placeholder: "currency...",
 
     tasks_title: "My tasks",
     tasks_empty: "list is empty",
