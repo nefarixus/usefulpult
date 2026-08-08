@@ -17,18 +17,49 @@ function shuffled(arr: string[]) {
   return copy;
 }
 
+// Tries a free random-word API first for effectively unlimited variety;
+// falls back to the local curated list (shuffled, no repeats until the
+// bag is exhausted) if the API is slow, down, or unreachable — these
+// free keyless services are known to be flaky, so the generator should
+// never actually break because of them.
+async function fetchWordsFromApi(count: number): Promise<string[] | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(`https://random-word-api.herokuapp.com/word?number=${count}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return data.slice(0, count).map((w: string) => w.toLowerCase());
+  } catch {
+    return null;
+  }
+}
+
 export default function WordGenerator() {
   const bag = useRef<string[]>([]);
   const [words, setWords] = useState<string[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
   const { t } = useSettings();
 
-  function draw() {
+  function drawFromLocalList() {
     if (bag.current.length < WORDS_PER_DRAW) {
       bag.current = shuffled(AESTHETIC_WORDS);
     }
     setWords(bag.current.splice(0, WORDS_PER_DRAW));
+  }
+
+  async function draw() {
     setCopied(null);
+    const fromApi = await fetchWordsFromApi(WORDS_PER_DRAW);
+    if (fromApi && fromApi.length === WORDS_PER_DRAW) {
+      setWords(fromApi);
+    } else {
+      drawFromLocalList();
+    }
   }
 
   useEffect(() => {
@@ -63,7 +94,7 @@ export default function WordGenerator() {
           >
             {w}
             {copied === w && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-home-sage text-home-bg shadow-softSm">
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-home-accent text-home-bg shadow-softSm">
                 <Check size={12} strokeWidth={3} />
                 <span className="sr-only">{t("words_copied")}</span>
               </span>
