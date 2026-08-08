@@ -62,21 +62,46 @@ export default function WeatherWidget() {
         .then((json) => {
           if (cancelled) return;
 
-          const daily = json.daily.time
-            .slice(0, 4)
-            .map((iso: string, i: number) => ({
-              day: DAYS_SHORT[lang][new Date(iso).getDay()],
+          // Open-Meteo returns naive local-time strings for the queried
+          // city (e.g. "2026-08-08T19:00"), not UTC — parsing those with
+          // `new Date(iso)` interprets them in the *viewer's* timezone,
+          // which is wrong for any city other than the viewer's own. All
+          // the parsing below works on the string digits directly instead.
+
+          const daily = json.daily.time.slice(0, 4).map((iso: string, i: number) => {
+            const [y, m, d] = iso.split("-").map(Number);
+            const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+            return {
+              day: DAYS_SHORT[lang][dow],
               max: Math.round(json.daily.temperature_2m_max[i]),
               min: Math.round(json.daily.temperature_2m_min[i]),
               code: json.daily.weather_code[i],
-            }));
+            };
+          });
 
-          const nowIso = new Date().toISOString().slice(0, 13);
+          const cityNowKey = new Intl.DateTimeFormat("en-US", {
+            timeZone: json.timezone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            hour12: false,
+          })
+            .formatToParts(new Date())
+            .reduce((acc, p) => {
+              if (p.type === "year") acc.y = p.value;
+              if (p.type === "month") acc.m = p.value;
+              if (p.type === "day") acc.d = p.value;
+              if (p.type === "hour") acc.h = p.value === "24" ? "00" : p.value;
+              return acc;
+            }, {} as Record<string, string>);
+          const nowKey = `${cityNowKey.y}-${cityNowKey.m}-${cityNowKey.d}T${cityNowKey.h}`;
+
           const hourlyTimes: string[] = json.hourly.time;
-          let startIdx = hourlyTimes.findIndex((t: string) => t.slice(0, 13) >= nowIso);
+          let startIdx = hourlyTimes.findIndex((t: string) => t.slice(0, 13) >= nowKey);
           if (startIdx === -1) startIdx = 0;
-          const hourly = hourlyTimes.slice(startIdx, startIdx + 6).map((iso, i) => ({
-            hour: new Date(iso).getHours(),
+          const hourly = hourlyTimes.slice(startIdx, startIdx + 10).map((iso, i) => ({
+            hour: Number(iso.slice(11, 13)),
             temp: Math.round(json.hourly.temperature_2m[startIdx + i]),
             code: json.hourly.weather_code[startIdx + i],
           }));

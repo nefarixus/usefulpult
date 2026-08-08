@@ -26,6 +26,7 @@ let pinnedToDesktop = false;
 // from Electron, we track it ourselves and treat it as the source of
 // truth — every setPosition call we make updates this too.
 let currentPos = { x: 40, y: 20 };
+let currentSize = { width: 440, height: 560 };
 let localServer = null;
 
 const MIME_TYPES = {
@@ -142,6 +143,8 @@ function createTrayIcon() {
 }
 
 const stateFilePath = path.join(app.getPath("userData"), "window-state.json");
+const MIN_WIDTH = 440;
+const MIN_HEIGHT = 420;
 
 function loadWindowState() {
   try {
@@ -154,15 +157,19 @@ function loadWindowState() {
   return null;
 }
 
+function currentState() {
+  return { x: currentPos.x, y: currentPos.y, width: currentSize.width, height: currentSize.height };
+}
+
 let saveStateTimer = null;
 function saveWindowState() {
   if (saveStateTimer) clearTimeout(saveStateTimer);
   saveStateTimer = setTimeout(() => {
     saveStateTimer = null;
     try {
-      fs.writeFileSync(stateFilePath, JSON.stringify({ x: currentPos.x, y: currentPos.y }));
+      fs.writeFileSync(stateFilePath, JSON.stringify(currentState()));
     } catch (e) {
-      console.warn("[pult] не удалось сохранить позицию окна:", e.message);
+      console.warn("[pult] не удалось сохранить состояние окна:", e.message);
     }
   }, 300);
 }
@@ -173,7 +180,7 @@ function flushWindowStateNow() {
     saveStateTimer = null;
   }
   try {
-    fs.writeFileSync(stateFilePath, JSON.stringify({ x: currentPos.x, y: currentPos.y }));
+    fs.writeFileSync(stateFilePath, JSON.stringify(currentState()));
   } catch (e) {
     // best effort — nothing more we can do on the way out
   }
@@ -187,20 +194,27 @@ function clampToScreen(pos, winWidth, winHeight, screenWidth, screenHeight) {
 }
 
 async function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  const winWidth = 440;
-  const winHeight = 560;
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const defaultWidth = 440;
+  const defaultHeight = 560;
 
   const saved = loadWindowState();
+  currentSize = saved
+    ? {
+        width: Math.max(MIN_WIDTH, Math.min(saved.width || defaultWidth, screenWidth)),
+        height: Math.max(MIN_HEIGHT, Math.min(saved.height || defaultHeight, screenHeight)),
+      }
+    : { width: defaultWidth, height: defaultHeight };
+
   currentPos = saved
-    ? clampToScreen(saved, winWidth, winHeight, width, height)
-    : { x: 40, y: Math.max(20, height - winHeight - 40) };
+    ? clampToScreen(saved, currentSize.width, currentSize.height, screenWidth, screenHeight)
+    : { x: 40, y: Math.max(20, screenHeight - currentSize.height - 40) };
 
   mainWindow = new BrowserWindow({
-    width: winWidth,
-    height: winHeight,
-    minWidth: winWidth,
-    minHeight: 420,
+    width: currentSize.width,
+    height: currentSize.height,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     x: currentPos.x,
     y: currentPos.y,
     frame: false,
@@ -215,6 +229,17 @@ async function createWindow() {
       nodeIntegration: false,
       preload: path.join(__dirname, "preload.js"),
     },
+  });
+
+  mainWindow.on("move", () => {
+    const [x, y] = mainWindow.getPosition();
+    currentPos = { x, y };
+    saveWindowState();
+  });
+  mainWindow.on("resize", () => {
+    const [w, h] = mainWindow.getSize();
+    currentSize = { width: w, height: h };
+    saveWindowState();
   });
 
   let startUrl = process.env.ELECTRON_START_URL;
@@ -526,9 +551,7 @@ app.whenReady().then(async () => {
   ipcMain.handle("get-window-position", () => [currentPos.x, currentPos.y]);
   ipcMain.on("set-window-position", (_e, x, y) => {
     if (!mainWindow) return;
-    currentPos = { x: Math.round(x), y: Math.round(y) };
-    mainWindow.setPosition(currentPos.x, currentPos.y);
-    saveWindowState();
+    mainWindow.setPosition(Math.round(x), Math.round(y));
   });
 
   ipcMain.handle("get-autostart", () => app.getLoginItemSettings().openAtLogin);
