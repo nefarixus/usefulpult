@@ -43,6 +43,11 @@ export const translations = {
     words_title: "Случайные слова",
     words_button: "сгенерировать ещё",
     words_copied: "скопировано",
+    words_topic_mixed: "разное",
+    words_topic_aesthetic: "эстетика",
+    words_topic_nature: "природа",
+    words_topic_emotions: "эмоции",
+    words_topic_space: "космос",
 
     settings_title: "Настройки",
     settings_theme: "Цветовая тема",
@@ -106,6 +111,11 @@ export const translations = {
     words_title: "Random words",
     words_button: "generate more",
     words_copied: "copied",
+    words_topic_mixed: "mixed",
+    words_topic_aesthetic: "aesthetic",
+    words_topic_nature: "nature",
+    words_topic_emotions: "emotions",
+    words_topic_space: "space",
 
     settings_title: "Settings",
     settings_theme: "Color theme",
