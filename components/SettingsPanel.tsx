@@ -13,6 +13,7 @@ const THEMES: { id: Exclude<Theme, "custom">; hex: string }[] = [
 ];
 
 const LANGS: Lang[] = ["ru", "en"];
+const OPACITY_KEY = "pult:windowOpacity";
 
 export default function SettingsPanel() {
   const {
@@ -27,10 +28,21 @@ export default function SettingsPanel() {
     setCustomAccent,
   } = useSettings();
   const [autostart, setAutostartState] = useState<boolean | null>(null);
+  const [opacity, setOpacityState] = useState<number | null>(null);
+  const [acrylic, setAcrylicState] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (window.pult?.getAutostart) {
       window.pult.getAutostart().then(setAutostartState);
+    }
+    if (window.pult?.setWindowOpacity) {
+      const saved = localStorage.getItem(OPACITY_KEY);
+      const value = saved !== null ? Number(saved) : 100;
+      setOpacityState(value);
+      window.pult.setWindowOpacity(value / 100);
+    }
+    if (window.pult?.getAcrylicEnabled) {
+      window.pult.getAcrylicEnabled().then(setAcrylicState);
     }
   }, []);
 
@@ -39,6 +51,18 @@ export default function SettingsPanel() {
     const next = !autostart;
     setAutostartState(next);
     window.pult.setAutostart(next);
+  }
+
+  function toggleAcrylic() {
+    if (acrylic === null || !window.pult?.setAcrylicEnabled) return;
+    window.pult.setAcrylicEnabled(!acrylic);
+    // the app relaunches itself right after this to apply the change
+  }
+
+  function handleOpacityChange(value: number) {
+    setOpacityState(value);
+    localStorage.setItem(OPACITY_KEY, String(value));
+    window.pult?.setWindowOpacity?.(value / 100);
   }
 
   return (
@@ -141,6 +165,48 @@ export default function SettingsPanel() {
           ))}
         </div>
       </div>
+
+      {opacity !== null && (
+        <div>
+          <p className="mb-2 flex items-center justify-between text-xs font-semibold text-home-dim">
+            <span>{t("settings_opacity")}</span>
+            <span>{opacity}%</span>
+          </p>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={opacity}
+            onChange={(e) => handleOpacityChange(Number(e.target.value))}
+            className="w-full accent-home-accent"
+          />
+        </div>
+      )}
+
+      {acrylic !== null && (
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-home-dim">
+              {t("settings_acrylic")}
+            </p>
+            <button
+              onClick={toggleAcrylic}
+              role="switch"
+              aria-checked={acrylic}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                acrylic ? "bg-home-accent" : "bg-home-border"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-home-text transition-transform ${
+                  acrylic ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <p className="mt-1 text-[10px] text-home-dim">{t("settings_acrylic_note")}</p>
+        </div>
+      )}
 
       {autostart !== null && (
         <div className="flex items-center justify-between gap-3">

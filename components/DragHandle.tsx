@@ -10,6 +10,9 @@ declare global {
       getAutostart: () => Promise<boolean>;
       setAutostart: (enabled: boolean) => void;
       copyText: (text: string) => void;
+      setWindowOpacity: (value: number) => void;
+      getAcrylicEnabled: () => Promise<boolean>;
+      setAcrylicEnabled: (enabled: boolean) => void;
     };
   }
 }

@@ -29,6 +29,18 @@ try {
   koffi = null;
 }
 
+// electron-acrylic-window's BrowserWindow is a drop-in replacement that
+// adds Windows Acrylic blur-behind support (via the undocumented
+// SetWindowCompositionAttribute API) on top of the stock one. If it
+// fails to load for any reason, fall back to the normal BrowserWindow —
+// acrylic is an experimental, best-effort feature, not a hard dependency.
+let AcrylicBrowserWindow = BrowserWindow;
+try {
+  AcrylicBrowserWindow = require("electron-acrylic-window").BrowserWindow;
+} catch (e) {
+  console.warn("[pult] electron-acrylic-window недоступен, эффект будет отключён:", e.message);
+}
+
 let mainWindow = null;
 let tray = null;
 // Disabled by default: reparenting the window into the desktop's WorkerW
@@ -161,6 +173,24 @@ function createTrayIcon() {
 }
 
 const stateFilePath = path.join(app.getPath("userData"), "window-state.json");
+const appSettingsPath = path.join(app.getPath("userData"), "app-settings.json");
+
+function loadAcrylicEnabled() {
+  try {
+    const raw = fs.readFileSync(appSettingsPath, "utf8");
+    return JSON.parse(raw).acrylicEnabled === true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function saveAcrylicEnabled(enabled) {
+  try {
+    fs.writeFileSync(appSettingsPath, JSON.stringify({ acrylicEnabled: !!enabled }));
+  } catch (e) {
+    console.warn("[pult] не удалось сохранить настройку acrylic:", e.message);
+  }
+}
 const MIN_WIDTH = 440;
 const MIN_HEIGHT = 420;
 
@@ -228,7 +258,9 @@ async function createWindow() {
     ? clampToScreen(saved, currentSize.width, currentSize.height, screenWidth, screenHeight)
     : { x: 40, y: Math.max(20, screenHeight - currentSize.height - 40) };
 
-  mainWindow = new BrowserWindow({
+  const acrylicEnabled = loadAcrylicEnabled();
+
+  const windowOptions = {
     width: currentSize.width,
     height: currentSize.height,
     minWidth: MIN_WIDTH,
@@ -236,8 +268,8 @@ async function createWindow() {
     x: currentPos.x,
     y: currentPos.y,
     frame: false,
-    transparent: false,
-    backgroundColor: "#1b1815",
+    transparent: acrylicEnabled,
+    backgroundColor: acrylicEnabled ? "#00000000" : "#1b1815",
     resizable: true,
     skipTaskbar: true,
     hasShadow: false,
@@ -247,7 +279,20 @@ async function createWindow() {
       nodeIntegration: false,
       preload: path.join(__dirname, "preload.js"),
     },
-  });
+  };
+
+  if (acrylicEnabled) {
+    // "effect: acrylic" is the frosted-glass blur-behind look (like the
+    // Windows Start menu); "theme: dark" tints it to match our palette.
+    windowOptions.vibrancy = {
+      theme: "dark",
+      effect: "acrylic",
+      useCustomWindowRefreshMethod: true,
+      disableOnBlur: false,
+    };
+  }
+
+  mainWindow = new AcrylicBrowserWindow(windowOptions);
 
   mainWindow.on("move", () => {
     const [x, y] = mainWindow.getPosition();
@@ -432,6 +477,17 @@ function rebuildTrayMenu() {
       },
     },
     { type: "separator" },
+    {
+      label: "Сбросить прозрачность окна",
+      click: () => {
+        if (!mainWindow) return;
+        mainWindow.setOpacity(1);
+        mainWindow.webContents.executeJavaScript(
+          "localStorage.setItem('pult:windowOpacity', '100')"
+        ).catch(() => {});
+      },
+    },
+    { type: "separator" },
     { label: "Проверить обновления", click: () => checkForUpdates(true) },
     { type: "separator" },
     { label: "Выход", click: () => app.quit() },
@@ -575,6 +631,22 @@ app.whenReady().then(async () => {
   ipcMain.handle("get-autostart", () => app.getLoginItemSettings().openAtLogin);
   ipcMain.on("set-autostart", (_e, enabled) => {
     app.setLoginItemSettings({ openAtLogin: !!enabled });
+  });
+
+  ipcMain.on("set-window-opacity", (_e, value) => {
+    if (!mainWindow) return;
+    const clamped = Math.min(1, Math.max(0, Number(value)));
+    if (!Number.isNaN(clamped)) mainWindow.setOpacity(clamped);
+  });
+
+  ipcMain.handle("get-acrylic-enabled", () => loadAcrylicEnabled());
+  ipcMain.on("set-acrylic-enabled", (_e, enabled) => {
+    saveAcrylicEnabled(!!enabled);
+    // transparent/vibrancy only take effect at window-creation time, so
+    // apply the change by relaunching rather than trying to mutate a
+    // live window into/out of transparency.
+    app.relaunch();
+    app.exit();
   });
 
   ipcMain.on("copy-text", (_e, text) => {

@@ -53,6 +53,9 @@ export const translations = {
     settings_theme: "Цветовая тема",
     settings_language: "Язык",
     settings_autostart: "Запускать вместе с Windows",
+    settings_opacity: "Прозрачность окна",
+    settings_acrylic: "Acrylic-эффект (эксперимент)",
+    settings_acrylic_note: "Размытие фона как в меню Пуск. Требует перезапуска приложения, может работать нестабильно на некоторых версиях Windows.",
 
     theme_amber: "Янтарь",
     theme_ocean: "Океан",
@@ -121,6 +124,9 @@ export const translations = {
     settings_theme: "Color theme",
     settings_language: "Language",
     settings_autostart: "Launch with Windows",
+    settings_opacity: "Window opacity",
+    settings_acrylic: "Acrylic effect (experimental)",
+    settings_acrylic_note: "Frosted-glass blur, like the Start menu. Requires an app restart, may be unstable on some Windows versions.",
 
     theme_amber: "Amber",
     theme_ocean: "Ocean",

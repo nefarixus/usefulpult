@@ -159,6 +159,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (savedAccent) setCustomAccentState(savedAccent);
     if (savedTheme) setThemeState(savedTheme);
     if (savedLang) setLang(savedLang);
+
+    if (window.pult?.getAcrylicEnabled) {
+      window.pult.getAcrylicEnabled().then((enabled) => {
+        if (enabled) {
+          document.documentElement.style.setProperty("--bg-alpha", "0.55");
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {

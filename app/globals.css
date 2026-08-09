@@ -61,7 +61,7 @@ html,
 body {
   padding: 0;
   margin: 0;
-  background: rgb(var(--color-bg));
+  background: rgb(var(--color-bg) / var(--bg-alpha, 1));
 }
 
 body {
