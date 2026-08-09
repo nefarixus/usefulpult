@@ -241,6 +241,28 @@ function clampToScreen(pos, winWidth, winHeight, screenWidth, screenHeight) {
   };
 }
 
+function applyRoundedCorners(win) {
+  if (!koffi) return;
+  try {
+    const dwmapi = koffi.load("dwmapi.dll");
+    const DwmSetWindowAttribute = dwmapi.func(
+      "long __stdcall DwmSetWindowAttribute(uintptr_t hWnd, uint32_t dwAttribute, void *pvAttribute, uint32_t cbAttribute)"
+    );
+    const handleBuffer = win.getNativeWindowHandle();
+    const hwndValue =
+      process.arch === "x64" || process.arch === "arm64"
+        ? handleBuffer.readBigUInt64LE(0)
+        : handleBuffer.readUInt32LE(0);
+    const DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    const DWMWCP_ROUND = 2;
+    const pref = Buffer.alloc(4);
+    pref.writeInt32LE(DWMWCP_ROUND, 0);
+    DwmSetWindowAttribute(hwndValue, DWMWA_WINDOW_CORNER_PREFERENCE, pref, 4);
+  } catch (e) {
+    console.warn("[pult] не удалось скруглить углы окна:", e.message);
+  }
+}
+
 async function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
   const defaultWidth = 440;
@@ -256,7 +278,10 @@ async function createWindow() {
 
   currentPos = saved
     ? clampToScreen(saved, currentSize.width, currentSize.height, screenWidth, screenHeight)
-    : { x: 40, y: Math.max(20, screenHeight - currentSize.height - 40) };
+    : {
+        x: Math.round((screenWidth - currentSize.width) / 2),
+        y: Math.round((screenHeight - currentSize.height) / 2),
+      };
 
   const acrylicEnabled = loadAcrylicEnabled();
 
@@ -293,6 +318,7 @@ async function createWindow() {
   }
 
   mainWindow = new AcrylicBrowserWindow(windowOptions);
+  applyRoundedCorners(mainWindow);
 
   mainWindow.on("move", () => {
     const [x, y] = mainWindow.getPosition();
