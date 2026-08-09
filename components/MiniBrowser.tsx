@@ -5,8 +5,10 @@ import { Globe, ArrowLeft, ArrowRight, RotateCw, X, House } from "lucide-react";
 import Card from "./Card";
 import { useSettings } from "@/lib/settings";
 
-const HOME_URL = "https://www.google.com";
+const HOME_URL = "https://duckduckgo.com";
 const STORAGE_KEY = "pult:browserLastUrl";
+const DESKTOP_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
 type WebviewEl = HTMLElement & {
   src: string;
@@ -25,7 +27,7 @@ function normalizeInput(raw: string): string {
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   const looksLikeDomain = /^[\w-]+(\.[\w-]+)+(\/.*)?$/i.test(trimmed);
   if (looksLikeDomain) return `https://${trimmed}`;
-  return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
+  return `https://duckduckgo.com/?q=${encodeURIComponent(trimmed)}`;
 }
 
 export default function MiniBrowser() {
@@ -138,6 +140,7 @@ export default function MiniBrowser() {
           <webview
             ref={webviewRef as unknown as React.RefObject<HTMLElement>}
             src={currentUrl}
+            useragent={DESKTOP_USER_AGENT}
             style={{ width: "100%", height: "100%" }}
           />
         )}
