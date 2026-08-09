@@ -1,6 +1,6 @@
 {
   "name": "home-pult",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "private": true,
   "description": "Уютный тёмный виджет для рабочего стола Windows — часы, погода, курс валют и не только.",
   "author": "nefarixus",
@@ -48,7 +48,8 @@
     "files": [
       "electron/**/*",
       "out/**/*",
-      "package.json"
+      "package.json",
+      "build/icon.ico"
     ],
     "win": {
       "target": ["nsis", "portable"],

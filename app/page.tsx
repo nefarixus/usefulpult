@@ -10,6 +10,7 @@ import WeatherWidget from "@/components/WeatherWidget";
 import CurrencyWidget from "@/components/CurrencyWidget";
 import GameChecklist from "@/components/GameChecklist";
 import WordGenerator from "@/components/WordGenerator";
+import MiniBrowser from "@/components/MiniBrowser";
 import SettingsPanel from "@/components/SettingsPanel";
 import { useSettings } from "@/lib/settings";
 
@@ -20,14 +21,16 @@ export default function Home() {
 
   useEffect(() => setReady(true), []);
 
+  const isBrowser = active === "browser";
+
   return (
     <DragHandle>
       <main
-        className={`mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 overflow-y-auto px-4 py-5 transition-opacity duration-500 ${
-          ready ? "opacity-100" : "opacity-0"
-        }`}
+        className={`mx-auto flex max-w-md flex-col gap-4 overflow-y-auto px-4 py-5 transition-opacity duration-500 ${
+          isBrowser ? "h-screen" : "min-h-screen justify-center"
+        } ${ready ? "opacity-100" : "opacity-0"}`}
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex shrink-0 items-center justify-between gap-2">
           <div className="flex items-center gap-2 py-1 pr-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-home-accentSoft text-home-accent">
               <HomeIcon size={16} />
@@ -39,12 +42,13 @@ export default function Home() {
           <TabBar active={active} onChange={setActive} />
         </div>
 
-        <div>
+        <div className={isBrowser ? "min-h-0 flex-1" : ""}>
           {active === "clock" && <ClockWidget />}
           {active === "weather" && <WeatherWidget />}
           {active === "currency" && <CurrencyWidget />}
           {active === "tasks" && <GameChecklist />}
           {active === "words" && <WordGenerator />}
+          {active === "browser" && <MiniBrowser />}
           {active === "settings" && (
             <Card title={t("settings_title")} icon={<Settings size={18} />}>
               <SettingsPanel />

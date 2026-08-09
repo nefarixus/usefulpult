@@ -278,11 +278,11 @@ async function createWindow() {
     x: currentPos.x,
     y: currentPos.y,
     frame: false,
-    // Must stay false — Electron's native backgroundMaterial (below)
-    // needs an opaque-but-zero-alpha window, not a transparent one;
-    // setting transparent:true breaks window snapping/shadows and
-    // conflicts with how backgroundMaterial composites.
-    transparent: false,
+    // Electron's backgroundMaterial only tints the non-client area unless
+    // the window is also transparent — without this the client area (our
+    // actual content) stays opaque and you just see a flat blended color
+    // instead of real blur-behind (electron/electron#38454).
+    transparent: acrylicEnabled,
     backgroundColor: acrylicEnabled ? "#00000000" : "#1b1815",
     resizable: true,
     skipTaskbar: true,
@@ -292,6 +292,7 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       preload: path.join(__dirname, "preload.js"),
+      webviewTag: true,
     },
   };
 
@@ -300,6 +301,8 @@ async function createWindow() {
     // needed. Values: 'auto' | 'none' | 'mica' | 'acrylic' | 'tabbed'.
     windowOptions.backgroundMaterial = "acrylic";
   }
+
+  windowOptions.icon = resolveTrayIcon();
 
   mainWindow = new BrowserWindow(windowOptions);
   applyRoundedCorners(mainWindow);
@@ -488,13 +491,21 @@ function rebuildTrayMenu() {
     },
     { type: "separator" },
     {
-      label: "Сбросить прозрачность окна",
-      click: () => {
-        if (!mainWindow) return;
-        mainWindow.setOpacity(1);
-        mainWindow.webContents.executeJavaScript(
-          "localStorage.setItem('pult:windowOpacity', '100')"
-        ).catch(() => {});
+      label: "Сбросить прозрачность и эффекты",
+      click: async () => {
+        if (mainWindow) {
+          mainWindow.setOpacity(1);
+          try {
+            await mainWindow.webContents.executeJavaScript(
+              "localStorage.setItem('pult:windowOpacity', '100')"
+            );
+          } catch (e) {
+            // best effort — proceeding to relaunch regardless
+          }
+        }
+        saveAcrylicEnabled(false);
+        app.relaunch();
+        app.exit();
       },
     },
     { type: "separator" },
@@ -505,8 +516,21 @@ function rebuildTrayMenu() {
   tray.setContextMenu(menu);
 }
 
+function resolveTrayIcon() {
+  try {
+    const iconPath = path.join(__dirname, "../build/icon.ico");
+    if (fs.existsSync(iconPath)) {
+      const img = nativeImage.createFromPath(iconPath);
+      if (!img.isEmpty()) return img.resize({ width: 16, height: 16, quality: "best" });
+    }
+  } catch (e) {
+    console.warn("[pult] не удалось загрузить build/icon.ico для трея:", e.message);
+  }
+  return createTrayIcon();
+}
+
 function createTray() {
-  tray = new Tray(createTrayIcon());
+  tray = new Tray(resolveTrayIcon());
   tray.setToolTip("Домашний пульт");
   rebuildTrayMenu();
   tray.on("click", () => {

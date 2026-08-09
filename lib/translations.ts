@@ -9,6 +9,7 @@ export const translations = {
     tab_currency: "Курс валют",
     tab_tasks: "Мои дела",
     tab_words: "Случайные слова",
+    tab_browser: "Браузер",
     tab_settings: "Настройки",
 
     clock_title: "Сейчас",
@@ -56,6 +57,8 @@ export const translations = {
     settings_opacity: "Прозрачность окна",
     settings_acrylic: "Acrylic-эффект (эксперимент)",
     settings_acrylic_note: "Размытие фона как в меню Пуск. Только Windows 11, требует перезапуска приложения.",
+    browser_title: "Браузер",
+    browser_placeholder: "адрес или поиск...",
 
     theme_amber: "Янтарь",
     theme_ocean: "Океан",
@@ -80,6 +83,7 @@ export const translations = {
     tab_currency: "Exchange rates",
     tab_tasks: "My tasks",
     tab_words: "Random words",
+    tab_browser: "Browser",
     tab_settings: "Settings",
 
     clock_title: "Right now",
@@ -127,6 +131,8 @@ export const translations = {
     settings_opacity: "Window opacity",
     settings_acrylic: "Acrylic effect (experimental)",
     settings_acrylic_note: "Frosted-glass blur, like the Start menu. Windows 11 only, requires an app restart.",
+    browser_title: "Browser",
+    browser_placeholder: "address or search...",
 
     theme_amber: "Amber",
     theme_ocean: "Ocean",

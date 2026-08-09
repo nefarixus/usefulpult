@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, CloudSun, Coins, ListChecks, Sparkles, Settings } from "lucide-react";
+import { Clock, CloudSun, Coins, ListChecks, Sparkles, Settings, Globe } from "lucide-react";
 import { useSettings } from "@/lib/settings";
 import type { TranslationKey } from "@/lib/translations";
 
@@ -10,6 +10,7 @@ const TABS = [
   { id: "currency", labelKey: "tab_currency", Icon: Coins },
   { id: "tasks", labelKey: "tab_tasks", Icon: ListChecks },
   { id: "words", labelKey: "tab_words", Icon: Sparkles },
+  { id: "browser", labelKey: "tab_browser", Icon: Globe },
   { id: "settings", labelKey: "tab_settings", Icon: Settings },
 ] as const satisfies { id: string; labelKey: TranslationKey; Icon: typeof Clock }[];
 
