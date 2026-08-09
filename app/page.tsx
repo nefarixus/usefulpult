@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <DragHandle>
       <main
-        className={`mx-auto flex min-h-screen max-w-md flex-col gap-4 px-4 py-5 transition-opacity duration-500 ${
+        className={`mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 overflow-y-auto px-4 py-5 transition-opacity duration-500 ${
           ready ? "opacity-100" : "opacity-0"
         }`}
       >

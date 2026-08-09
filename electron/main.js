@@ -278,10 +278,7 @@ async function createWindow() {
 
   currentPos = saved
     ? clampToScreen(saved, currentSize.width, currentSize.height, screenWidth, screenHeight)
-    : {
-        x: Math.round((screenWidth - currentSize.width) / 2),
-        y: Math.round((screenHeight - currentSize.height) / 2),
-      };
+    : { x: 40, y: Math.max(20, screenHeight - currentSize.height - 40) };
 
   const acrylicEnabled = loadAcrylicEnabled();
 
