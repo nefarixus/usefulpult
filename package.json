@@ -1,7 +1,9 @@
 {
   "name": "home-pult",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "private": true,
+  "description": "Уютный тёмный виджет для рабочего стола Windows — часы, погода, курс валют и не только.",
+  "author": "nefarixus",
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
@@ -9,9 +11,9 @@
     "start": "next start",
     "lint": "next lint",
     "electron:dev": "concurrently -k \"npm run dev\" \"wait-on http://localhost:3000 && cross-env ELECTRON_START_URL=http://localhost:3000 electron .\"",
-    "electron:pack": "next build && electron-builder --dir",
-    "electron:build": "next build && electron-builder",
-    "electron:publish": "next build && dotenv -e .env -- electron-builder --publish always"
+    "electron:pack": "rimraf dist-electron && next build && electron-builder --dir",
+    "electron:build": "rimraf dist-electron && next build && electron-builder",
+    "electron:publish": "rimraf dist-electron && next build && dotenv -e .env -- electron-builder --publish always"
   },
   "dependencies": {
     "next": "14.2.5",
@@ -35,7 +37,8 @@
     "concurrently": "^8.2.2",
     "wait-on": "^7.2.0",
     "cross-env": "^7.0.3",
-    "dotenv-cli": "^7.4.2"
+    "dotenv-cli": "^7.4.2",
+    "rimraf": "^5.0.10"
   },
   "build": {
     "appId": "com.homepult.app",
@@ -49,11 +52,14 @@
       "package.json"
     ],
     "win": {
-      "target": ["nsis", "portable"]
+      "target": ["nsis", "portable"],
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     },
     "publish": {
       "provider": "github",
