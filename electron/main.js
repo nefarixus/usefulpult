@@ -4,6 +4,24 @@ const path = require("path");
 const http = require("http");
 const fs = require("fs");
 
+// Prevents two windows ever existing at once — this can otherwise happen
+// after a Windows restart if both our own autostart entry AND Windows'
+// own "reopen apps on sign-in" feature try to launch the app. Only the
+// first instance actually runs; any later launch just refocuses it and
+// exits immediately.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 let koffi = null;
 try {
   koffi = require("koffi");

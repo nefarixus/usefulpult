@@ -54,8 +54,17 @@ export default function CurrencyWidget() {
   }, [base]);
 
   function selectBase(code: string) {
+    const oldBase = base;
     setBase(code);
-    setTargets((prev) => (prev ?? []).filter((c) => c !== code));
+    setTargets((prev) => {
+      const withoutNewBase = (prev ?? []).filter((c) => c !== code);
+      // Swap: the old base takes the spot the new base is vacating,
+      // instead of just disappearing from the list.
+      if (oldBase && oldBase !== code && !withoutNewBase.includes(oldBase)) {
+        return [...withoutNewBase, oldBase].slice(0, MAX_TARGETS);
+      }
+      return withoutNewBase;
+    });
     setPickerMode(null);
   }
 
