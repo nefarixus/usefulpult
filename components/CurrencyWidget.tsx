@@ -8,8 +8,10 @@ import { useSettings } from "@/lib/settings";
 
 const BASE_KEY = "pult:currencyBase";
 const TARGETS_KEY = "pult:currencyTargets";
+const AMOUNT_KEY = "pult:currencyAmount";
 const DEFAULT_BASE = "EUR";
 const DEFAULT_TARGETS = ["USD", "GBP", "JPY", "CHF"];
+const DEFAULT_AMOUNT = 100;
 const STEP = 10;
 const MAX_TARGETS = 6;
 
@@ -18,15 +20,20 @@ export default function CurrencyWidget() {
   const [targets, setTargets] = useState<string[] | null>(null);
   const [rates, setRates] = useState<Record<string, number> | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [amount, setAmount] = useState(100);
+  const [amount, setAmount] = useState(DEFAULT_AMOUNT);
   const [pickerMode, setPickerMode] = useState<"base" | "target" | null>(null);
   const { lang, t } = useSettings();
 
   useEffect(() => {
     const savedBase = localStorage.getItem(BASE_KEY);
     const savedTargets = localStorage.getItem(TARGETS_KEY);
+    const savedAmount = localStorage.getItem(AMOUNT_KEY);
     setBase(savedBase || DEFAULT_BASE);
     setTargets(savedTargets ? JSON.parse(savedTargets) : DEFAULT_TARGETS);
+    if (savedAmount !== null) {
+      const parsed = Number(savedAmount);
+      if (!Number.isNaN(parsed)) setAmount(parsed);
+    }
   }, []);
 
   useEffect(() => {
@@ -36,6 +43,10 @@ export default function CurrencyWidget() {
   useEffect(() => {
     if (targets) localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
   }, [targets]);
+
+  useEffect(() => {
+    localStorage.setItem(AMOUNT_KEY, String(amount));
+  }, [amount]);
 
   useEffect(() => {
     if (!base) return;
