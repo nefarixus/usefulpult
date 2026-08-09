@@ -55,7 +55,7 @@ export const translations = {
     settings_autostart: "Запускать вместе с Windows",
     settings_opacity: "Прозрачность окна",
     settings_acrylic: "Acrylic-эффект (эксперимент)",
-    settings_acrylic_note: "Размытие фона как в меню Пуск. Требует перезапуска приложения, может работать нестабильно на некоторых версиях Windows.",
+    settings_acrylic_note: "Размытие фона как в меню Пуск. Только Windows 11, требует перезапуска приложения.",
 
     theme_amber: "Янтарь",
     theme_ocean: "Океан",
@@ -126,7 +126,7 @@ export const translations = {
     settings_autostart: "Launch with Windows",
     settings_opacity: "Window opacity",
     settings_acrylic: "Acrylic effect (experimental)",
-    settings_acrylic_note: "Frosted-glass blur, like the Start menu. Requires an app restart, may be unstable on some Windows versions.",
+    settings_acrylic_note: "Frosted-glass blur, like the Start menu. Windows 11 only, requires an app restart.",
 
     theme_amber: "Amber",
     theme_ocean: "Ocean",

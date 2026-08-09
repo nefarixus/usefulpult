@@ -21,8 +21,7 @@
     "react-dom": "^18.3.1",
     "lucide-react": "^0.454.0",
     "koffi": "^2.9.0",
-    "electron-updater": "^6.3.4",
-    "electron-acrylic-window": "^4.3.0"
+    "electron-updater": "^6.3.4"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",

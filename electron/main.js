@@ -29,18 +29,6 @@ try {
   koffi = null;
 }
 
-// electron-acrylic-window's BrowserWindow is a drop-in replacement that
-// adds Windows Acrylic blur-behind support (via the undocumented
-// SetWindowCompositionAttribute API) on top of the stock one. If it
-// fails to load for any reason, fall back to the normal BrowserWindow —
-// acrylic is an experimental, best-effort feature, not a hard dependency.
-let AcrylicBrowserWindow = BrowserWindow;
-try {
-  AcrylicBrowserWindow = require("electron-acrylic-window").BrowserWindow;
-} catch (e) {
-  console.warn("[pult] electron-acrylic-window недоступен, эффект будет отключён:", e.message);
-}
-
 let mainWindow = null;
 let tray = null;
 // Disabled by default: reparenting the window into the desktop's WorkerW
@@ -290,7 +278,11 @@ async function createWindow() {
     x: currentPos.x,
     y: currentPos.y,
     frame: false,
-    transparent: acrylicEnabled,
+    // Must stay false — Electron's native backgroundMaterial (below)
+    // needs an opaque-but-zero-alpha window, not a transparent one;
+    // setting transparent:true breaks window snapping/shadows and
+    // conflicts with how backgroundMaterial composites.
+    transparent: false,
     backgroundColor: acrylicEnabled ? "#00000000" : "#1b1815",
     resizable: true,
     skipTaskbar: true,
@@ -304,17 +296,12 @@ async function createWindow() {
   };
 
   if (acrylicEnabled) {
-    // "effect: acrylic" is the frosted-glass blur-behind look (like the
-    // Windows Start menu); "theme: dark" tints it to match our palette.
-    windowOptions.vibrancy = {
-      theme: "dark",
-      effect: "acrylic",
-      useCustomWindowRefreshMethod: true,
-      disableOnBlur: false,
-    };
+    // Native to Electron since v23 (Windows 11 only) — no extra package
+    // needed. Values: 'auto' | 'none' | 'mica' | 'acrylic' | 'tabbed'.
+    windowOptions.backgroundMaterial = "acrylic";
   }
 
-  mainWindow = new AcrylicBrowserWindow(windowOptions);
+  mainWindow = new BrowserWindow(windowOptions);
   applyRoundedCorners(mainWindow);
 
   mainWindow.on("move", () => {
