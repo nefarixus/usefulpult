@@ -329,6 +329,17 @@ async function createWindow() {
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     if (pinnedToDesktop) embedIntoDesktop();
+    if (acrylicEnabled) {
+      // backgroundMaterial often doesn't actually composite until the
+      // window is resized at least once — this fakes a tiny resize
+      // right after showing so the blur is correct from the start
+      // instead of only kicking in once the person manually resizes.
+      const [w, h] = mainWindow.getSize();
+      mainWindow.setSize(w + 1, h);
+      setTimeout(() => {
+        if (mainWindow) mainWindow.setSize(w, h);
+      }, 60);
+    }
   });
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {

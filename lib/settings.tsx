@@ -163,7 +163,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (window.pult?.getAcrylicEnabled) {
       window.pult.getAcrylicEnabled().then((enabled) => {
         if (enabled) {
-          document.documentElement.style.setProperty("--bg-alpha", "0.3");
+          document.documentElement.style.setProperty("--bg-alpha", "0.12");
           document.documentElement.setAttribute("data-acrylic", "true");
         }
       });

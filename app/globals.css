@@ -73,7 +73,7 @@ body {
 /* Widget cards cover most of the window, so in acrylic mode they also
    need to let the blur through, not just the thin gaps around them. */
 [data-acrylic="true"] .rounded-xl2 {
-  background-color: rgb(var(--color-card) / 0.75) !important;
+  background-color: rgb(var(--color-card) / 0.45) !important;
 }
 
 ::selection {
