@@ -253,12 +253,16 @@ function applyRoundedCorners(win) {
 
 let acrylicEnabled = false;
 
+let acrylicNudgeInFlight = false;
 function nudgeAcrylicComposition() {
-  if (!acrylicEnabled || !mainWindow) return;
+  if (!acrylicEnabled || !mainWindow || !mainWindow.isVisible()) return;
+  if (acrylicNudgeInFlight) return;
+  acrylicNudgeInFlight = true;
   const [w, h] = mainWindow.getSize();
   mainWindow.setSize(w + 1, h);
   setTimeout(() => {
     if (mainWindow) mainWindow.setSize(w, h);
+    acrylicNudgeInFlight = false;
   }, 60);
 }
 
@@ -668,6 +672,16 @@ app.whenReady().then(async () => {
   await createWindow();
   createTray();
   setupAutoUpdater();
+
+  if (acrylicEnabled) {
+    // A periodic catch-all: DWM can silently drop the blur composition
+    // for all sorts of undocumented reasons (fullscreen games, Alt+Tab,
+    // Energy Saver, idle) that don't reliably fire a 'focus' event on
+    // our window. Polling and re-nudging every few seconds is more
+    // robust than chasing each individual trigger — the 1px resize is
+    // small enough to not be visually noticeable.
+    setInterval(nudgeAcrylicComposition, 5000);
+  }
 
   ipcMain.handle("get-window-position", () => [currentPos.x, currentPos.y]);
   ipcMain.on("set-window-position", (_e, x, y) => {
