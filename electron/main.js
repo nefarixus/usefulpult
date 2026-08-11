@@ -251,6 +251,17 @@ function applyRoundedCorners(win) {
   }
 }
 
+let acrylicEnabled = false;
+
+function nudgeAcrylicComposition() {
+  if (!acrylicEnabled || !mainWindow) return;
+  const [w, h] = mainWindow.getSize();
+  mainWindow.setSize(w + 1, h);
+  setTimeout(() => {
+    if (mainWindow) mainWindow.setSize(w, h);
+  }, 60);
+}
+
 async function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
   const defaultWidth = 440;
@@ -268,7 +279,7 @@ async function createWindow() {
     ? clampToScreen(saved, currentSize.width, currentSize.height, screenWidth, screenHeight)
     : { x: 40, y: Math.max(20, screenHeight - currentSize.height - 40) };
 
-  const acrylicEnabled = loadAcrylicEnabled();
+  acrylicEnabled = loadAcrylicEnabled();
 
   const windowOptions = {
     width: currentSize.width,
@@ -317,6 +328,7 @@ async function createWindow() {
     currentSize = { width: w, height: h };
     saveWindowState();
   });
+  mainWindow.on("focus", () => nudgeAcrylicComposition());
 
   let startUrl = process.env.ELECTRON_START_URL;
   if (!startUrl) {
@@ -329,17 +341,7 @@ async function createWindow() {
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     if (pinnedToDesktop) embedIntoDesktop();
-    if (acrylicEnabled) {
-      // backgroundMaterial often doesn't actually composite until the
-      // window is resized at least once — this fakes a tiny resize
-      // right after showing so the blur is correct from the start
-      // instead of only kicking in once the person manually resizes.
-      const [w, h] = mainWindow.getSize();
-      mainWindow.setSize(w + 1, h);
-      setTimeout(() => {
-        if (mainWindow) mainWindow.setSize(w, h);
-      }, 60);
-    }
+    nudgeAcrylicComposition();
   });
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
@@ -693,6 +695,8 @@ app.whenReady().then(async () => {
     app.relaunch();
     app.exit();
   });
+
+  ipcMain.on("nudge-acrylic", () => nudgeAcrylicComposition());
 
   ipcMain.on("copy-text", (_e, text) => {
     clipboard.writeText(String(text ?? ""));
