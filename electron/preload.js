@@ -9,5 +9,4 @@ contextBridge.exposeInMainWorld("pult", {
   setWindowOpacity: (value) => ipcRenderer.send("set-window-opacity", value),
   getAcrylicEnabled: () => ipcRenderer.invoke("get-acrylic-enabled"),
   setAcrylicEnabled: (enabled) => ipcRenderer.send("set-acrylic-enabled", enabled),
-  nudgeAcrylic: () => ipcRenderer.send("nudge-acrylic"),
 });

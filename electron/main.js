@@ -253,17 +253,61 @@ function applyRoundedCorners(win) {
 
 let acrylicEnabled = false;
 
-let acrylicNudgeInFlight = false;
-function nudgeAcrylicComposition() {
-  if (!acrylicEnabled || !mainWindow || !mainWindow.isVisible()) return;
-  if (acrylicNudgeInFlight) return;
-  acrylicNudgeInFlight = true;
-  const [w, h] = mainWindow.getSize();
-  mainWindow.setSize(w + 1, h);
-  setTimeout(() => {
-    if (mainWindow) mainWindow.setSize(w, h);
-    acrylicNudgeInFlight = false;
-  }, 60);
+// The classic Windows blur-behind trick (SetWindowCompositionAttribute +
+// ACCENT_ENABLE_BLURBEHIND) — what Rainmeter-style always-on desktop
+// widgets actually use. Unlike Electron's native backgroundMaterial
+// (Mica/Acrylic), this is NOT tied to window focus: once set, it stays
+// blurred whether the window is active or sitting in the background,
+// which is what a persistent desktop widget needs. GradientColor alpha
+// is left at 0 (pure blur, no native tint) — our own CSS handles all
+// the color tinting via --bg-alpha, so the two don't double up.
+function applyBlurBehind(win) {
+  if (!koffi) return false;
+  try {
+    const user32 = koffi.load("user32.dll");
+
+    koffi.struct("PULT_ACCENT_POLICY", {
+      AccentState: "int32_t",
+      AccentFlags: "int32_t",
+      GradientColor: "int32_t",
+      AnimationId: "int32_t",
+    });
+
+    koffi.struct("PULT_WCA_DATA", {
+      Attrib: "int32_t",
+      Data: "PULT_ACCENT_POLICY *",
+      SizeOfData: "uintptr_t",
+    });
+
+    const SetWindowCompositionAttribute = user32.func(
+      "bool __stdcall SetWindowCompositionAttribute(uintptr_t hWnd, PULT_WCA_DATA *pData)"
+    );
+
+    const handleBuffer = win.getNativeWindowHandle();
+    const hwndValue =
+      process.arch === "x64" || process.arch === "arm64"
+        ? handleBuffer.readBigUInt64LE(0)
+        : handleBuffer.readUInt32LE(0);
+
+    const ACCENT_ENABLE_BLURBEHIND = 3;
+    const WCA_ACCENT_POLICY = 19;
+
+    const result = SetWindowCompositionAttribute(hwndValue, {
+      Attrib: WCA_ACCENT_POLICY,
+      Data: {
+        AccentState: ACCENT_ENABLE_BLURBEHIND,
+        AccentFlags: 2,
+        GradientColor: 0,
+        AnimationId: 0,
+      },
+      SizeOfData: 16,
+    });
+    console.log("[pult] SetWindowCompositionAttribute вернул:", result);
+    return !!result;
+  } catch (e) {
+    console.warn("[pult] не удалось применить blur-behind:", e.message);
+    return false;
+  }
 }
 
 async function createWindow() {
@@ -293,10 +337,10 @@ async function createWindow() {
     x: currentPos.x,
     y: currentPos.y,
     frame: false,
-    // Electron's backgroundMaterial only tints the non-client area unless
-    // the window is also transparent — without this the client area (our
-    // actual content) stays opaque and you just see a flat blended color
-    // instead of real blur-behind (electron/electron#38454).
+    // Needed for the client area (our actual content) to let the
+    // blur-behind show through — without this it stays opaque and
+    // blur-behind only affects the (non-existent, since frame:false)
+    // non-client area.
     transparent: acrylicEnabled,
     backgroundColor: acrylicEnabled ? "#00000000" : "#1b1815",
     resizable: true,
@@ -311,16 +355,11 @@ async function createWindow() {
     },
   };
 
-  if (acrylicEnabled) {
-    // Native to Electron since v23 (Windows 11 only) — no extra package
-    // needed. Values: 'auto' | 'none' | 'mica' | 'acrylic' | 'tabbed'.
-    windowOptions.backgroundMaterial = "acrylic";
-  }
-
   windowOptions.icon = resolveTrayIcon();
 
   mainWindow = new BrowserWindow(windowOptions);
   applyRoundedCorners(mainWindow);
+  if (acrylicEnabled) applyBlurBehind(mainWindow);
 
   mainWindow.on("move", () => {
     const [x, y] = mainWindow.getPosition();
@@ -332,7 +371,6 @@ async function createWindow() {
     currentSize = { width: w, height: h };
     saveWindowState();
   });
-  mainWindow.on("focus", () => nudgeAcrylicComposition());
 
   let startUrl = process.env.ELECTRON_START_URL;
   if (!startUrl) {
@@ -345,7 +383,6 @@ async function createWindow() {
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     if (pinnedToDesktop) embedIntoDesktop();
-    nudgeAcrylicComposition();
   });
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
@@ -673,16 +710,6 @@ app.whenReady().then(async () => {
   createTray();
   setupAutoUpdater();
 
-  if (acrylicEnabled) {
-    // A periodic catch-all: DWM can silently drop the blur composition
-    // for all sorts of undocumented reasons (fullscreen games, Alt+Tab,
-    // Energy Saver, idle) that don't reliably fire a 'focus' event on
-    // our window. Polling and re-nudging every few seconds is more
-    // robust than chasing each individual trigger — the 1px resize is
-    // small enough to not be visually noticeable.
-    setInterval(nudgeAcrylicComposition, 5000);
-  }
-
   ipcMain.handle("get-window-position", () => [currentPos.x, currentPos.y]);
   ipcMain.on("set-window-position", (_e, x, y) => {
     if (!mainWindow) return;
@@ -709,8 +736,6 @@ app.whenReady().then(async () => {
     app.relaunch();
     app.exit();
   });
-
-  ipcMain.on("nudge-acrylic", () => nudgeAcrylicComposition());
 
   ipcMain.on("copy-text", (_e, text) => {
     clipboard.writeText(String(text ?? ""));

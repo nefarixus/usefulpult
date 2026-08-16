@@ -41,13 +41,7 @@ export default function Home() {
               {t("app_title")}
             </span>
           </div>
-          <TabBar
-            active={active}
-            onChange={(id) => {
-              setActive(id);
-              window.pult?.nudgeAcrylic?.();
-            }}
-          />
+          <TabBar active={active} onChange={setActive} />
         </div>
 
         <div className={isBrowser ? "min-h-0 flex-1" : ""}>

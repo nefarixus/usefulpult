@@ -13,7 +13,6 @@ declare global {
       setWindowOpacity: (value: number) => void;
       getAcrylicEnabled: () => Promise<boolean>;
       setAcrylicEnabled: (enabled: boolean) => void;
-      nudgeAcrylic: () => void;
     };
   }
 }
